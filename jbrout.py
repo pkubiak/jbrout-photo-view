@@ -875,7 +875,7 @@ class TreeTags(gtk.TreeStore):
 
 class Window(GladeApp):
     """Main JBrout window"""
-    glade = os.path.join(os.path.dirname(__file__), 'data/jbrout.glade')
+    glade = os.path.join(os.path.dirname(__file__), 'data/jbrout2.glade')
     window = "window"
 
     def init(self):
@@ -1840,7 +1840,7 @@ class Window(GladeApp):
              event.type == gtk.gdk._2BUTTON_PRESS and\
              len(self.tbl.getSelected()) != 0:
             # call the winshow
-            self.call_winshow(self.tbl.items, self.tbl.items.index(self.tbl.getSelected()[-1]), self.tbl.getSelected())
+            self.call_photoshow(self.tbl.items, self.tbl.items.index(self.tbl.getSelected()[-1]), self.tbl.getSelected())
             return 1
 
     def get_menu(self, widget, ln):
@@ -1987,8 +1987,23 @@ class Window(GladeApp):
 
         return menu
 
+    def call_photoshow(self, imagesList, index, selected = []):
+        self.notebook2.set_current_page(1)
+        print len(imagesList)
+        print index
+        print selected
+
+    #HERE
     def call_winshow(self, l, i, selected=[]):
-        isInfo = JBrout.conf["showInfo"] == 1 and True or False
+        """
+        Call when image should be fullscreened.
+
+        @param l: list of images (jbrout.db.PhotoNode) to show (e.g. current album, search results, etc.)
+        @param i: position in `l` which should be show as first
+        @param selected: list of selected images
+        """
+
+        """isInfo = JBrout.conf["showInfo"] == 1 and True or False
         isModify = JBrout.modify
         w = WinShow(l, i, isInfo, isModify, selected)
         w.hpShow.set_position( int(JBrout.conf["viewertreewidth"] or 160) )
@@ -2014,7 +2029,7 @@ class Window(GladeApp):
         if w.invalidThumbs:     # is thumbs need to be redrawn
             for i in w.invalidThumbs:
                 Buffer.remove(i.file)
-            self.tbl.refresh()
+            self.tbl.refresh()"""
 
     def on_selecteur_menu_delete_tag(self, b, sel, tag):
         ln = sel.getSelected()
@@ -2422,7 +2437,7 @@ class Window(GladeApp):
         else:
             if key in ['f11', 'kp_enter', 'return'] :
                 if len(self.tbl.getSelected())>0:
-                    self.call_winshow(self.tbl.items, self.tbl.items.index(self.tbl.getSelected()[-1]), self.tbl.getSelected())
+                    self.call_photoshow(self.tbl.items, self.tbl.items.index(self.tbl.getSelected()[-1]), self.tbl.getSelected())
             elif key == "escape":
                 self.on_window_delete_event(self, widget)
                 self.quit()
