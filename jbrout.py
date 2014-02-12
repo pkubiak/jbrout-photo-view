@@ -69,6 +69,7 @@ from jbrout.externaltools import ExternalTools
 from jbrout.winbookmarks import WinBookmark
 from jbrout.winpref import WinPref
 from jbrout.tools import rawFormats
+from jbrout.photoview import PhotoView
 
 import tempfile
 import shutil
@@ -953,7 +954,6 @@ class Window(GladeApp):
         table = ListView(self, JBrout.modify)
         table.connect('button-press-event', self.on_selecteur_mouseClick)
 
-
         # code to make a black background in the listview (override style)
         # (but i'm not able to select a white color for texts ;-( ))
         #table.modify_bg(gtk.STATE_NORMAL, gtk.gdk.Color(red=0, green=0, blue=0, pixel=0))
@@ -961,6 +961,13 @@ class Window(GladeApp):
         # and init all static images
         Buffer.clear()
 
+        #create the empty photoview
+        photoview = PhotoView(self)
+        print dir(photoview)
+        #print dir(self.notebook2)
+        #print self.notebook2.__class__
+        #print photoview.__class
+        self.notebook2.append_page(photoview.main_widget, None)
 
         # build the "plugins buttons"
         if JBrout.modify:

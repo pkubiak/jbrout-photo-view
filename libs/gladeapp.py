@@ -81,26 +81,22 @@ class GladeApp:
 
         # recupere la liste des windows du glade -> l
         x=parse(self.glade)
-        l=[(i.getAttribute("id"),i) for i in x.documentElement.childNodes if i.nodeType == i.ELEMENT_NODE]
-        assert len(l)>=1,"*ERROR* pas de widget dans le .glade"
 
-        # controle le matching object avec une ou la window du glade
-        if len(l)>1:
-            theId,theNode=None,None
-            assert hasattr(self,"window"), "*ERROR* manque attribut 'window' dans '%s' (car le glade en possede plusieurs)"%n
-            for id,node in l:
-                if self.window == id:
-                    theId,theNode=id,node
-                    break;
-            assert theNode!=None, "*ERROR* l'attribut 'window' dans '%s' ne correspond a aucune window dans le .glade"%n
-        else:
-            theId,theNode=l[0]
+        theNode = None
+        for widget in x.getElementsByTagName('widget'):
+            if widget.hasAttribute('id') and widget.getAttribute('id') == self.window:
+                theId,theNode = self.window, widget
+                print widget
+                break
+
+        assert theNode!=None, "*ERROR* l'attribut 'window' dans '%s' ne correspond a aucune widget dans le .glade"%n
 
         # verifi que ses events sont presents
-        for i in re.findall(r"""<signal handler="([^"]+)" """,theNode.toxml()):
-            if not hasattr(self,i):
+        for signal in theNode.getElementsByTagName('signal'):
+            if signal.hasAttribute('handler') and not hasattr(self, signal.getAttribute('handler')):
                 print "*WARNING* manque methode dans '%s'"%n
-                print "    def %s(self,*args):" % i
+                print "    def %s(self,*args):" % signal.getAttribute('handler')
+
 
         # chargement du glage
         self.__xml = gtk.glade.XML(self.glade,theId)
