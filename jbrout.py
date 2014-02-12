@@ -876,7 +876,7 @@ class TreeTags(gtk.TreeStore):
 
 class Window(GladeApp):
     """Main JBrout window"""
-    glade = os.path.join(os.path.dirname(__file__), 'data/jbrout2.glade')
+    glade = os.path.join(os.path.dirname(__file__), 'data/jbrout.glade')
     window = "window"
 
     def init(self):
