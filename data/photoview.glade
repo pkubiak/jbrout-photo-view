@@ -68,6 +68,7 @@
                     <property name="receives_default">True</property>
                     <property name="border_width">4</property>
                     <property name="relief">none</property>
+                    <signal name="clicked" handler="on_prev_button_clicked" swapped="no"/>
                   </widget>
                   <packing>
                     <property name="expand">False</property>
@@ -181,6 +182,7 @@
                     <property name="border_width">4</property>
                     <property name="relief">none</property>
                     <property name="image_position">right</property>
+                    <signal name="clicked" handler="on_next_button_clicked" swapped="no"/>
                   </widget>
                   <packing>
                     <property name="expand">False</property>

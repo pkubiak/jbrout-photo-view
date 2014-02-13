@@ -962,12 +962,12 @@ class Window(GladeApp):
         Buffer.clear()
 
         #create the empty photoview
-        photoview = PhotoView(self)
-        print dir(photoview)
+        self.photoview = PhotoView(self)
+        print dir(self.photoview)
         #print dir(self.notebook2)
         #print self.notebook2.__class__
         #print photoview.__class
-        self.notebook2.append_page(photoview.main_widget, None)
+        self.notebook2.append_page(self.photoview.main_widget, None)
 
         # build the "plugins buttons"
         if JBrout.modify:
@@ -1995,10 +1995,15 @@ class Window(GladeApp):
         return menu
 
     def call_photoshow(self, imagesList, index, selected = []):
+        self.photoview.init_data(imagesList, index, selected)
         self.notebook2.set_current_page(1)
-        print len(imagesList)
-        print index
-        print selected
+
+        #print len(imagesList)
+
+        #print index
+        #print imagesList[index].getThumb()
+        #print selected
+
 
     #HERE
     def call_winshow(self, l, i, selected=[]):
