@@ -77,100 +77,151 @@
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkImage" id="thumbnail1">
-                    <property name="width_request">40</property>
-                    <property name="height_request">40</property>
+                  <widget class="GtkEventBox" id="thumbnail1event">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="stock">gtk-missing-image</property>
+                    <child>
+                      <widget class="GtkImage" id="thumbnail1">
+                        <property name="width_request">40</property>
+                        <property name="height_request">40</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="stock">gtk-missing-image</property>
+                      </widget>
+                    </child>
                   </widget>
                   <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
                     <property name="position">1</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkImage" id="thumbnail2">
-                    <property name="width_request">40</property>
-                    <property name="height_request">40</property>
+                  <widget class="GtkEventBox" id="thumbnail2event">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="stock">gtk-missing-image</property>
+                    <child>
+                      <widget class="GtkImage" id="thumbnail2">
+                        <property name="width_request">40</property>
+                        <property name="height_request">40</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="stock">gtk-missing-image</property>
+                      </widget>
+                    </child>
                   </widget>
                   <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
                     <property name="position">2</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkImage" id="thumbnail3">
-                    <property name="width_request">40</property>
-                    <property name="height_request">40</property>
+                  <widget class="GtkEventBox" id="thumbnail3event">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="stock">gtk-missing-image</property>
+                    <child>
+                      <widget class="GtkImage" id="thumbnail3">
+                        <property name="width_request">40</property>
+                        <property name="height_request">40</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="stock">gtk-missing-image</property>
+                      </widget>
+                    </child>
                   </widget>
                   <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
                     <property name="position">3</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkImage" id="thumbnail4">
-                    <property name="width_request">40</property>
-                    <property name="height_request">40</property>
+                  <widget class="GtkFrame" id="frame2">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="stock">gtk-missing-image</property>
+                    <property name="border_width">2</property>
+                    <property name="label_xalign">0</property>
+                    <property name="shadow_type">out</property>
+                    <child>
+                      <widget class="GtkImage" id="thumbnail4">
+                        <property name="width_request">40</property>
+                        <property name="height_request">40</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="stock">gtk-missing-image</property>
+                      </widget>
+                    </child>
+                    <child>
+                      <placeholder/>
+                      <packing>
+                        <property name="type">label_item</property>
+                      </packing>
+                    </child>
                   </widget>
                   <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
                     <property name="position">4</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkImage" id="thumbnail5">
-                    <property name="width_request">40</property>
-                    <property name="height_request">40</property>
+                  <widget class="GtkEventBox" id="thumbnail5event">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="stock">gtk-missing-image</property>
+                    <child>
+                      <widget class="GtkImage" id="thumbnail5">
+                        <property name="width_request">40</property>
+                        <property name="height_request">40</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="stock">gtk-missing-image</property>
+                      </widget>
+                    </child>
                   </widget>
                   <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
                     <property name="position">5</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkImage" id="thumbnail6">
-                    <property name="width_request">40</property>
-                    <property name="height_request">40</property>
+                  <widget class="GtkEventBox" id="thumbnail6event">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="stock">gtk-missing-image</property>
+                    <child>
+                      <widget class="GtkImage" id="thumbnail6">
+                        <property name="width_request">40</property>
+                        <property name="height_request">40</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="stock">gtk-missing-image</property>
+                      </widget>
+                    </child>
                   </widget>
                   <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
                     <property name="position">6</property>
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkImage" id="thumbnail7">
-                    <property name="width_request">40</property>
-                    <property name="height_request">40</property>
+                  <widget class="GtkEventBox" id="thumbnail7event">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="stock">gtk-missing-image</property>
+                    <child>
+                      <widget class="GtkImage" id="thumbnail7">
+                        <property name="width_request">40</property>
+                        <property name="height_request">40</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="stock">gtk-missing-image</property>
+                      </widget>
+                    </child>
                   </widget>
                   <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
                     <property name="position">7</property>
                   </packing>
                 </child>
@@ -304,7 +355,7 @@
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <child>
-                          <widget class="GtkImage" id="image10">
+                          <widget class="GtkImage" id="image">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="pixbuf">img.jpg</property>
@@ -390,12 +441,12 @@
           </packing>
         </child>
         <child>
-          <widget class="GtkEventBox" id="eventbox1">
+          <widget class="GtkEventBox" id="statusline_eventbox">
             <property name="height_request">18</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <child>
-              <widget class="GtkLabel" id="status_line">
+              <widget class="GtkLabel" id="statusline">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="label" translatable="yes">11:59:39 (1280x720) 3.4MB (26 of 39)</property>
