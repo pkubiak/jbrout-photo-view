@@ -444,9 +444,10 @@
                 <property name="can_focus">False</property>
                 <property name="spacing">3</property>
                 <child>
-                  <widget class="GtkFrame" id="frame1">
+                  <widget class="GtkFrame" id="selection_frame">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="border_width">2</property>
                     <property name="label_xalign">0</property>
                     <property name="shadow_type">in</property>
                     <child>
@@ -460,14 +461,7 @@
                       </widget>
                     </child>
                     <child>
-                      <widget class="GtkLabel" id="label8">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Basket</property>
-                        <property name="use_markup">True</property>
-                        <property name="ellipsize">start</property>
-                        <property name="max_width_chars">100</property>
-                      </widget>
+                      <placeholder/>
                       <packing>
                         <property name="type">label_item</property>
                       </packing>
@@ -480,15 +474,13 @@
                   </packing>
                 </child>
                 <child>
-                  <widget class="GtkVBox" id="vbox8">
+                  <widget class="GtkVBox" id="selection_buttons">
                     <property name="width_request">30</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="spacing">4</property>
-                    <property name="homogeneous">True</property>
                     <child>
-                      <widget class="GtkButton" id="button11">
-                        <property name="label" translatable="yes">+</property>
+                      <widget class="GtkButton" id="selection_add_button">
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
@@ -500,8 +492,7 @@
                       </packing>
                     </child>
                     <child>
-                      <widget class="GtkButton" id="button12">
-                        <property name="label" translatable="yes">-</property>
+                      <widget class="GtkButton" id="selection_remove_button">
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
@@ -513,8 +504,7 @@
                       </packing>
                     </child>
                     <child>
-                      <widget class="GtkButton" id="button13">
-                        <property name="label" translatable="yes">x</property>
+                      <widget class="GtkButton" id="selection_clear_button">
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
@@ -528,7 +518,7 @@
                   </widget>
                   <packing>
                     <property name="expand">False</property>
-                    <property name="fill">True</property>
+                    <property name="fill">False</property>
                     <property name="position">1</property>
                   </packing>
                 </child>
