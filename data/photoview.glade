@@ -272,66 +272,41 @@
             <property name="can_focus">False</property>
             <property name="spacing">4</property>
             <child>
-              <widget class="GtkVBox" id="vbox3">
-                <property name="width_request">240</property>
+              <widget class="GtkScrolledWindow" id="scrolledwindow2">
                 <property name="visible">True</property>
-                <property name="can_focus">False</property>
+                <property name="can_focus">True</property>
+                <property name="hscrollbar_policy">never</property>
+                <property name="vscrollbar_policy">automatic</property>
                 <child>
-                  <widget class="GtkVBox" id="vbox5">
+                  <widget class="GtkViewport" id="viewport2">
+                    <property name="width_request">240</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
-                      <widget class="GtkButton" id="button1">
+                      <widget class="GtkVBox" id="plugins_box">
+                        <property name="width_request">240</property>
                         <property name="visible">True</property>
-                        <property name="can_focus">True</property>
-                        <property name="receives_default">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="border_width">2</property>
+                        <property name="spacing">2</property>
                         <child>
-                          <widget class="GtkExpander" id="expander1">
-                            <property name="visible">True</property>
-                            <property name="can_focus">True</property>
-                            <child>
-                              <placeholder/>
-                            </child>
-                            <child>
-                              <widget class="GtkLabel" id="label1">
-                                <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <property name="label" translatable="yes">expander</property>
-                              </widget>
-                              <packing>
-                                <property name="type">label_item</property>
-                              </packing>
-                            </child>
-                          </widget>
+                          <placeholder/>
+                        </child>
+                        <child>
+                          <placeholder/>
+                        </child>
+                        <child>
+                          <placeholder/>
+                        </child>
+                        <child>
+                          <placeholder/>
+                        </child>
+                        <child>
+                          <placeholder/>
                         </child>
                       </widget>
-                      <packing>
-                        <property name="expand">True</property>
-                        <property name="fill">True</property>
-                        <property name="position">0</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <placeholder/>
                     </child>
                   </widget>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">False</property>
-                    <property name="position">0</property>
-                  </packing>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
                 </child>
               </widget>
               <packing>
@@ -345,17 +320,17 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <child>
-                  <widget class="GtkScrolledWindow" id="scrolledwindow1">
+                  <widget class="GtkScrolledWindow" id="scrolled_viewport">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="hscrollbar_policy">never</property>
-                    <property name="vscrollbar_policy">never</property>
                     <child>
-                      <widget class="GtkViewport" id="viewport1">
+                      <widget class="GtkViewport" id="image_viewport">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="shadow_type">none</property>
+                        <signal name="size_allocate" handler="on_image_viewport_size_allocate" swapped="no"/>
                         <child>
-                          <widget class="GtkImage" id="image">
+                          <widget class="GtkImage" id="display_image">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="pixbuf">img.jpg</property>
@@ -395,9 +370,7 @@
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">Make a caption!</property>
-                        <attributes>
-                          <attribute name="language" value=""/>
-                        </attributes>
+                        <property name="use_markup">True</property>
                       </widget>
                       <packing>
                         <property name="expand">True</property>
@@ -646,10 +619,18 @@
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <child>
-                          <widget class="GtkImage" id="zoom_out_icon">
+                          <widget class="GtkEventBox" id="zoom_out_eventbox">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="stock">gtk-zoom-out</property>
+                            <property name="events">GDK_BUTTON_PRESS_MASK | GDK_STRUCTURE_MASK</property>
+                            <signal name="button_press_event" handler="on_zoom_out_eventbox_button_press_event" swapped="no"/>
+                            <child>
+                              <widget class="GtkImage" id="zoom_out_icon">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="stock">gtk-zoom-out</property>
+                              </widget>
+                            </child>
                           </widget>
                           <packing>
                             <property name="expand">True</property>
@@ -659,13 +640,16 @@
                         </child>
                         <child>
                           <widget class="GtkHScale" id="zoom_scale">
-                            <property name="width_request">100</property>
+                            <property name="width_request">120</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
-                            <property name="show_fill_level">True</property>
+                            <property name="adjustment">0.40000000000000002 -3 5 0.10000000000000001 1 0</property>
+                            <property name="restrict_to_fill_level">False</property>
                             <property name="fill_level">0.40000000000000002</property>
                             <property name="digits">3</property>
                             <property name="draw_value">False</property>
+                            <property name="value_pos">left</property>
+                            <signal name="change_value" handler="on_zoom_scale_change_value" swapped="no"/>
                           </widget>
                           <packing>
                             <property name="expand">False</property>
@@ -674,10 +658,18 @@
                           </packing>
                         </child>
                         <child>
-                          <widget class="GtkImage" id="zoom_in_icon">
+                          <widget class="GtkEventBox" id="zoom_in_eventbox">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="stock">gtk-zoom-in</property>
+                            <property name="events">GDK_BUTTON_PRESS_MASK | GDK_STRUCTURE_MASK</property>
+                            <signal name="button_press_event" handler="on_zoom_in_eventbox_button_press_event" swapped="no"/>
+                            <child>
+                              <widget class="GtkImage" id="zoom_in_icon">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="stock">gtk-zoom-in</property>
+                              </widget>
+                            </child>
                           </widget>
                           <packing>
                             <property name="expand">True</property>
@@ -698,6 +690,7 @@
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
                         <property name="border_width">4</property>
+                        <signal name="clicked" handler="on_zoom_fit_button_clicked" swapped="no"/>
                       </widget>
                       <packing>
                         <property name="expand">False</property>
@@ -711,6 +704,7 @@
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
                         <property name="border_width">4</property>
+                        <signal name="clicked" handler="on_zoom_100_button_clicked" swapped="no"/>
                       </widget>
                       <packing>
                         <property name="expand">False</property>
