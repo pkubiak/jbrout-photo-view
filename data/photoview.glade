@@ -323,12 +323,13 @@
                   <widget class="GtkScrolledWindow" id="scrolled_viewport">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
+                    <signal name="size_allocate" handler="on_scrolled_viewport_size_allocate" swapped="no"/>
                     <child>
                       <widget class="GtkViewport" id="image_viewport">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="shadow_type">none</property>
                         <signal name="size_allocate" handler="on_image_viewport_size_allocate" swapped="no"/>
+                        <signal name="scroll_event" handler="on_image_viewport_scroll_event" swapped="no"/>
                         <child>
                           <widget class="GtkImage" id="display_image">
                             <property name="visible">True</property>

@@ -693,6 +693,25 @@ class PhotoNode(object):
         #~ return self.file == p.file
     # throw a bug in lxml ?!?! ;-(
 
+    def getOriginalThumbnail(self):
+        """
+        Return original thumbnail from exif
+        @return:
+        @raise:
+        """
+
+        try:
+            pb = Img(thumb=self.file).pixbuf
+        except IOError:  # 404
+            pb = Buffer.pixbufNF
+        except KeyError:  # no exif
+            pb = Buffer.pixbufNT
+        except:
+            pb = Buffer.pixbufERR
+            raise
+
+        return pb
+
     def getThumb(self):
         """ Get thumb from exif data"""
         if self.real == "yes":  # real photo (exifdate !)

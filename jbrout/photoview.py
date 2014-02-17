@@ -2,14 +2,17 @@ __author__ = 'solmyr'
 
 import gtk
 import os
-from __main__ import GladeApp
+import time
 from math import log, exp
+from __main__ import GladeApp
+
 
 def debug(f):
     def debug_f(*args, **kwargs):
         print 'enter: '+f.__name__+" "+str(args)+' '+str(kwargs)
-        f(*args, **kwargs)
+        x = f(*args, **kwargs)
         print 'exit: '+f.__name__
+        return x
     return debug_f
 
 class Utils():
@@ -96,22 +99,29 @@ class Utils():
         return box
 
 class PhotoView(GladeApp, object):
+    class Size():
+        def __init__(self, width, height):
+            self.width = width
+            self.height = height
+
     glade = os.path.join('..', os.path.dirname(os.path.dirname(__file__)), 'data', 'photoview.glade')
     window = "vbox1"
 
-    _zoom = 1.0
-    _zoom_min = 0.01
-    _zoom_max = 8.00
-    _zoom_fit = 0.1
+    _zoom = 0.0
+    _zoom_min = log(0.01)
+    _zoom_max = log(8.00)
+    _zoom_fit = log(0.1)
 
     _zoom_origin_x = 0.5
     _zoom_origin_y = 0.5
+    zoom_step = 0.1
 
     images_list = []
     _thumbnails_cache = {}
     parent = None
     thumbnails = []
     selected = []
+    _allocation = None
     #image zoom
     def _get_zoom(self):
         return self._zoom
@@ -126,6 +136,7 @@ class PhotoView(GladeApp, object):
             value = self._zoom_max
 
         if value != self._zoom:
+            old = self._zoom
             self._zoom = value
             if value < self._zoom_fit:
                 self._zoom_origin_x = 0.5
@@ -134,7 +145,7 @@ class PhotoView(GladeApp, object):
             if callback:
                 self.zoom_scale.set_value(value)
 
-            self._apply_zoom_on_image()
+            self._apply_zoom_on_image(exp(-old+value))
 
     def _set_zoom(self, value):
         self._set_zoom_with_callback(value)
@@ -150,7 +161,7 @@ class PhotoView(GladeApp, object):
         self._image = value
         self._compute_fit_zoom()
         self.zoom = 'fit'
-        self._apply_zoom_on_image() #show new image in widget
+        #self._apply_zoom_on_image() #show new image in widget
 
     image = property(_get_image, _set_image)
 
@@ -160,11 +171,10 @@ class PhotoView(GladeApp, object):
         return self._index
 
     def _set_index(self, value):
-        print '_set_index: '+str(value)
         if type(value) == int:
             if 0 <= value < len(self.images_list) and self._index != value:
                 self._index = value
-                self.image = self.current.getThumb()#getImage()#.getThumb()
+                self.image = self.current.getOriginalThumbnail()
                 self._update_view()
 
     index = property(_get_index, _set_index)
@@ -175,19 +185,18 @@ class PhotoView(GladeApp, object):
         return self.images_list[self.index]
     current = property(_get_current)
 
-
-
-
     def init(self, parent, params = {}):
         #connect buttons with icons
-        #self.index = None
-
         self.zoom_fit_button.add(Utils.create_stock_button(gtk.STOCK_ZOOM_FIT))
         self.zoom_100_button.add(Utils.create_stock_button(gtk.STOCK_ZOOM_100))
         self.library_back_button.add(Utils.create_stock_button(gtk.STOCK_GO_BACK, "Back to Library"))
         self.play_slideshow_button.add(Utils.create_stock_button(gtk.STOCK_MEDIA_PLAY, "Play"))
         self.prev_button.add(Utils.create_stock_button(gtk.STOCK_MEDIA_PREVIOUS))
         self.next_button.add(Utils.create_stock_button(gtk.STOCK_MEDIA_NEXT))
+
+        self.selection_add_button.add(Utils.create_stock_button(gtk.STOCK_ADD))
+        self.selection_remove_button.add(Utils.create_stock_button(gtk.STOCK_REMOVE))
+        self.selection_clear_button.add(Utils.create_stock_button(gtk.STOCK_CLEAR))
 
         self.add_tag_button.add(Utils.create_stock_button(gtk.STOCK_ADD))
 
@@ -207,14 +216,16 @@ class PhotoView(GladeApp, object):
         self.statusline_eventbox.modify_bg(gtk.STATE_NORMAL,  gtk.gdk.color_parse('#5590ba'))
         self.parent = parent
 
+        #connect change-value signals to scrollbars of main image
+        #self.scrolled_viewport.get_vscrollbar().connect('change-value', self.change_zoom_origin_x)
+
         label = gtk.Label("Hello World\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nHello")
         x = Utils.create_expander("QuickFix", label, False)
         self.plugins_box.pack_start(x, False, False)
 
     def move_to_thumbnail(self, widget, event, number):
-        print 'Move to thumbnail: '+str(number)+' '+str(type(number))
         self.index += number
-        print 'index: '+str(self.index)
+
 
     def _get_thumbnail_from_node(self, node):
         """
@@ -225,17 +236,17 @@ class PhotoView(GladeApp, object):
 
         if not node.file in self._thumbnails_cache:
             size = 32
-            pb = node.getThumb()
+            pb = node.getOriginalThumbnail()
             w,h = (pb.get_width(), pb.get_height())
 
-            if w < h:
-                pb = pb.subpixbuf((h - w)/2, 0, w, h)
-            else:
-                pb = pb.subpixbuf(0, (w - h)/2, w, h)
+            #if w < h:
+            #    pb = pb.subpixbuf((h - w)/2, 0, w, h)
+            #else:
+            #    pb = pb.subpixbuf(0, (w - h)/2, w, h)
 
             #print pb.get_width(), pb.get_height()
-            w = pb.get_width()
-            h = pb.get_height()
+            #w = pb.get_width()
+            #h = pb.get_height()
             if w > h:
                 pb = pb.scale_simple(w*size/h, size, gtk.gdk.INTERP_HYPER)
             else:
@@ -258,7 +269,6 @@ class PhotoView(GladeApp, object):
     def init_data(self, images_list, index, selected=[]):
         self.images_list = images_list
         self.selected = selected
-        print 'init: '+str(index)
         self.index = index
 
         self._update_view()
@@ -283,12 +293,11 @@ class PhotoView(GladeApp, object):
 
         self.statusline.set_text('    '.join(t))
 
-    @debug
     def _update_main_image(self):
-        if self.image is not None:
-            self._apply_zoom_on_image()
+        pass
+        #if self.image is not None:
+        #    self._apply_zoom_on_image()
 
-    @debug
     def _update_view(self):
         self._update_thumbnails_bar()
         self._update_main_image()
@@ -301,16 +310,15 @@ class PhotoView(GladeApp, object):
         Refresh zoom_scale (HScale) widget according to zoom properties
         """
         if self.image is not None:
-            print (self._zoom_min, self._zoom, self._zoom_max)
-            print self.zoom_scale.get_adjustment()
             self.zoom_scale.clear_marks()
-            self.zoom_scale.set_range(log(self._zoom_min), log(self._zoom_max))
+            print (self._zoom_min, self._zoom_max)
+            self.zoom_scale.set_range(self._zoom_min, self._zoom_max)
 
-            self.zoom_scale.add_mark(log(self._zoom_fit), gtk.POS_BOTTOM, "fit")
+            self.zoom_scale.add_mark(self._zoom_fit, gtk.POS_BOTTOM, "fit")
             self.zoom_scale.add_mark(0.0, gtk.POS_BOTTOM, "100%")
-            self.zoom_scale.set_value(log(self.zoom))
+            self.zoom_scale.set_value(self.zoom)
 
-
+    @debug
     def _compute_fit_zoom(self):
         """
         Set _zoom_fit according to viewport size
@@ -318,8 +326,8 @@ class PhotoView(GladeApp, object):
         if self.image is None:
             return
 
-        bounds = self.image_viewport.get_allocation()
-        print bounds
+        #TODO: change to _get_allocation_size()
+        bounds = self._get_allocation_size()
         width, height = bounds.width, bounds.height
 
         #add some margin
@@ -328,35 +336,77 @@ class PhotoView(GladeApp, object):
 
         set_zoom_fit = True if self._zoom_fit == self._zoom else False
         x = width*self.image.get_height()/height
-        print (width, height, self.image.get_width(), self.image.get_height(), x)
-        if x >= self.image.get_width():
-            self._zoom_fit = float(height)/float(self.image.get_height()) #fill height
-        else:
-            self._zoom_fit = float(width)/float(self.image.get_width()) #fill width
 
-        self._zoom_min = min( 1.0, self._zoom_fit) / 8.0
-        self._zoom_max = max(self._zoom_fit, 8.0)
+        if x >= self.image.get_width():
+            self._zoom_fit = log(float(height)/float(self.image.get_height())) #fill height
+        else:
+            self._zoom_fit = log(float(width)/float(self.image.get_width())) #fill width
+
+        #TODO: add better values
+        self._zoom_min = min( 0.0, self._zoom_fit-2.0)
+        self._zoom_max = max(self._zoom_fit+2.0, 0.0)
+
+        #If zoom was fitted, then restore them to 'fit'
         if set_zoom_fit:
             self.zoom = 'fit'
 
         self._update_zoom_scale()
 
+    def _get_zoomed_size(self):
+        if self.image is not None:
+            return PhotoView.Size(self.image.get_width()*exp(self.zoom), self.image.get_height()*exp(self.zoom))
+        return PhotoView.Size(0,0)
 
-    def _apply_zoom_on_image(self):
+    def _get_allocation_size(self):
+        if self._allocation is None:
+            self._allocation = self.image_viewport.get_allocation()
+        bounds = self._allocation#self.image_viewport.get_allocation()
+        return PhotoView.Size(bounds.width, bounds.height)
+
+    @debug
+    def _update_adjustments(self):
+        zoomed = self._get_zoomed_size()
+        alloc = self._get_allocation_size()
+
+        self.image_viewport.get_vadjustment().set_value(max(0.0, self._zoom_origin_y*zoomed.height-0.5*alloc.height))
+        self.image_viewport.get_hadjustment().set_value(max(0.0, self._zoom_origin_x*zoomed.width-0.5*alloc.width))
+        #self.scrolled_viewport.set_hadjustment(hadj)
+
+    @debug
+    def _apply_zoom_on_image(self, ratio):
         """
         Set display_image with applying current zoom property
         """
-        if self.image is not None:
-            #TODO
+        if self.image is not None and ratio != 1.0:
+            zoomed = self._get_zoomed_size()
+            alloc = self._get_allocation_size()
+
+            off_x = -self.image_viewport.get_bin_window().get_position()[0]
+            x = alloc.width*self._zoom_origin_x
+            dx = off_x+x
+
+            off_y = -self.image_viewport.get_bin_window().get_position()[1]
+            y = alloc.height*self._zoom_origin_y
+            dy = off_y+y
+            print (dx, dy, ratio, self._zoom_origin_x, self._zoom_origin_y)
+
+            self.image_viewport.get_bin_window().freeze_updates()
             self.display_image.set_from_pixbuf(
                 self.image.scale_simple(
-                    int(self.image.get_width()*self.zoom),
-                    int(self.image.get_height()*self.zoom),
+                    int(zoomed.width),
+                    int(zoomed.height),
                     gtk.gdk.INTERP_NEAREST #gtk.gdk.INTERP_HYPER
                 )
             )
 
+            alloc = self._get_allocation_size()
+            print (dx*ratio-x, dy*ratio-y)
+            self.image_viewport.get_hadjustment().set_value(dx*ratio-x)
 
+            self.image_viewport.get_vadjustment().set_value(dy*ratio-y)
+
+
+            self.image_viewport.get_bin_window().thaw_updates()
 
     def on_prev_button_clicked(self, event):
         self.index -= 1
@@ -369,27 +419,59 @@ class PhotoView(GladeApp, object):
         self.parent.notebook2.set_current_page(0)
         self.unload()
 
+
+    @debug
     def on_image_viewport_size_allocate(self, widget, allocation):
-        self._compute_fit_zoom()
+        alloc = self._get_allocation_size()
+
+        if alloc.width != allocation.width or alloc.height != allocation.height:
+            self._allocation = allocation
+
+            if self.image is not None:
+                self._compute_fit_zoom()
+
+        return False
+
 
     def on_zoom_fit_button_clicked(self, event):
+        self._zoom_origin_x = self._zoom_origin_y = 0.5
         self.zoom = 'fit'
 
     def on_zoom_100_button_clicked(self, event):
-        self.zoom = 1.0
+        self._zoom_origin_x = self._zoom_origin_y = 0.5
+        self.zoom = 0.0
 
     def on_zoom_out_eventbox_button_press_event(self, widget, event):
-        self.zoom*= 0.9
+        self._zoom_origin_x = self._zoom_origin_y = 0.5
+        self.zoom -= self.zoom_step
 
     def on_zoom_in_eventbox_button_press_event(self, widget, event):
-        self.zoom *= 1.0/0.9
-
-    def on_zoom_scale_value_changed(self, widget):
-        pass
-        #self._set_zoom_with_callback(exp(self.zoom_scale.get_value()), False)
+        self._zoom_origin_x = self._zoom_origin_y = 0.5
+        self.zoom += self.zoom_step
 
     def on_zoom_scale_change_value(self, widget, scroll, value):
-        self._set_zoom_with_callback(exp(value), False)
+        self._zoom_origin_x = self._zoom_origin_y = 0.5
+        self._set_zoom_with_callback(value, False)
+
+    @debug
+    def on_image_viewport_scroll_event(self, widget, event):
+        alloc = self._get_allocation_size()
+
+        orig_x = float(event.x)/float(alloc.width)
+        orig_y = float(event.y)/float(alloc.height)
+
+        print (orig_x, orig_y)
+
+        if event.direction == gtk.gdk.SCROLL_UP:
+            self._zoom_origin_x = orig_x
+            self._zoom_origin_y = orig_y
+            self.zoom += self.zoom_step
+        elif event.direction == gtk.gdk.SCROLL_DOWN:
+            self._zoom_origin_x = orig_x
+            self._zoom_origin_y = orig_y
+            self.zoom -= self.zoom_step
+
+        return True
 
 if __name__ == "__main__":
     x = PhotoView({'config': 123})
