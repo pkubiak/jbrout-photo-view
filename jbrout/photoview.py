@@ -4,6 +4,7 @@ import gtk
 import os
 import time
 from math import log, exp
+from jbrout.commongtk import InputQuestion
 from __main__ import GladeApp
 
 
@@ -73,9 +74,25 @@ class Utils():
         assert (image is not None) or (text is not None), "Cannot create empty stock button"
 
         if type(image) == str:
-            icon = gtk.image_new_from_stock(image, icon_size)
+            if gtk.stock_lookup(image):
+                icon = gtk.image_new_from_stock(image, icon_size)
+            elif gtk.icon_theme_get_default().has_icon(image):
+                icon = gtk.image_new_from_icon_name(image, icon_size)
+            else:
+                path = os.path.join('..', os.path.dirname(os.path.dirname(__file__)), 'data', 'gfx', image+'.png')
+                if os.path.exists(path):
+                    try:
+                        size = gtk.icon_size_lookup(icon_size)
+                        pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(path, size[0], size[1])
+                        icon = gtk.image_new_from_pixbuf(pixbuf)
+                    except:
+                        icon = gtk.image_new_from_stock(gtk.STOCK_MISSING_IMAGE)
+                else:
+                    icon = gtk.image_new_from_stock(gtk.STOCK_MISSING_IMAGE)
+
         else:
             return gtk.Label(text)
+
         icon.show()
 
         if text is None:
@@ -194,11 +211,14 @@ class PhotoView(GladeApp, object):
         self.prev_button.add(Utils.create_stock_button(gtk.STOCK_MEDIA_PREVIOUS))
         self.next_button.add(Utils.create_stock_button(gtk.STOCK_MEDIA_NEXT))
 
-        self.selection_add_button.add(Utils.create_stock_button(gtk.STOCK_ADD))
-        self.selection_remove_button.add(Utils.create_stock_button(gtk.STOCK_REMOVE))
-        self.selection_clear_button.add(Utils.create_stock_button(gtk.STOCK_CLEAR))
+        self.selection_add_button.add(Utils.create_stock_button(gtk.STOCK_ADD, icon_size=gtk.ICON_SIZE_MENU))
+        self.selection_remove_button.add(Utils.create_stock_button(gtk.STOCK_REMOVE, icon_size=gtk.ICON_SIZE_MENU))
+        self.selection_clear_button.add(Utils.create_stock_button(gtk.STOCK_CLEAR, icon_size=gtk.ICON_SIZE_MENU))
 
-        self.add_tag_button.add(Utils.create_stock_button(gtk.STOCK_ADD))
+        self.star_button.add(Utils.create_stock_button("unstarred"))
+        self.rotate_left_button.add(Utils.create_stock_button("object-rotate-left"))
+        self.rotate_right_button.add(Utils.create_stock_button("object-rotate-right"))
+        self.add_tag_button.add(Utils.create_stock_button("tag3"))
 
         self.thumbnails = [self.thumbnail1, self.thumbnail2, self.thumbnail3, self.thumbnail4, self.thumbnail5, self.thumbnail6, self.thumbnail7 ]
         self.image_viewport.modify_bg(gtk.STATE_NORMAL,  gtk.gdk.color_parse('#888A85'))
@@ -222,6 +242,10 @@ class PhotoView(GladeApp, object):
         label = gtk.Label("Hello World\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nHello")
         x = Utils.create_expander("QuickFix", label, False)
         self.plugins_box.pack_start(x, False, False)
+
+        self.image_viewport.connect("button_release_event", self.on_image_viewport_button_release_event)
+        self.caption_text.get_buffer().connect_after('changed', self.on_caption_text_changed_event)
+        self.caption_text.get_buffer().connect('insert-text', self.on_caption_text_insert_text_event)
 
     def move_to_thumbnail(self, widget, event, number):
         self.index += number
@@ -297,12 +321,20 @@ class PhotoView(GladeApp, object):
         pass
         #if self.image is not None:
         #    self._apply_zoom_on_image()
+    @debug
+    def _update_comment(self):
+        print 'Comment: '+str()
+        x = self.current.comment
+        if x == '':
+            x = 'Make a Caption!'
+        self.caption_text.get_buffer().set_text(x)
 
     def _update_view(self):
         self._update_thumbnails_bar()
         self._update_main_image()
         self._update_status_line()
         self._update_zoom_scale()
+        self._update_comment()
 
     @debug
     def _update_zoom_scale(self):
@@ -372,7 +404,7 @@ class PhotoView(GladeApp, object):
         self.image_viewport.get_hadjustment().set_value(max(0.0, self._zoom_origin_x*zoomed.width-0.5*alloc.width))
         #self.scrolled_viewport.set_hadjustment(hadj)
 
-    @debug
+
     def _apply_zoom_on_image(self, ratio):
         """
         Set display_image with applying current zoom property
@@ -388,7 +420,7 @@ class PhotoView(GladeApp, object):
             off_y = -self.image_viewport.get_bin_window().get_position()[1]
             y = alloc.height*self._zoom_origin_y
             dy = off_y+y
-            print (dx, dy, ratio, self._zoom_origin_x, self._zoom_origin_y)
+            #print (dx, dy, ratio, self._zoom_origin_x, self._zoom_origin_y)
 
             self.image_viewport.get_bin_window().freeze_updates()
             self.display_image.set_from_pixbuf(
@@ -400,7 +432,7 @@ class PhotoView(GladeApp, object):
             )
 
             alloc = self._get_allocation_size()
-            print (dx*ratio-x, dy*ratio-y)
+            #print (dx*ratio-x, dy*ratio-y)
             self.image_viewport.get_hadjustment().set_value(dx*ratio-x)
 
             self.image_viewport.get_vadjustment().set_value(dy*ratio-y)
@@ -420,7 +452,7 @@ class PhotoView(GladeApp, object):
         self.unload()
 
 
-    @debug
+
     def on_image_viewport_size_allocate(self, widget, allocation):
         alloc = self._get_allocation_size()
 
@@ -453,14 +485,20 @@ class PhotoView(GladeApp, object):
         self._zoom_origin_x = self._zoom_origin_y = 0.5
         self._set_zoom_with_callback(value, False)
 
-    @debug
-    def on_image_viewport_scroll_event(self, widget, event):
+
+    def on_scrolled_viewport_scroll_event(self, widget, event):
         alloc = self._get_allocation_size()
+        #zoomed = self._get_zoomed_size()
+
+        print (event.x, event.y)
 
         orig_x = float(event.x)/float(alloc.width)
         orig_y = float(event.y)/float(alloc.height)
 
-        print (orig_x, orig_y)
+        #orig_x = float(event.x)/float(zoomed.width)
+        #orig_y = float(event.y)/float(zoomed.height)
+
+        # print (orig_x, orig_y)
 
         if event.direction == gtk.gdk.SCROLL_UP:
             self._zoom_origin_x = orig_x
@@ -472,6 +510,99 @@ class PhotoView(GladeApp, object):
             self.zoom -= self.zoom_step
 
         return True
+
+
+    def on_scrolled_viewport_motion_notify_event(self, widget, event):
+        return False
+
+
+    def on_image_viewport_button_press_event(self, widget, event):
+        print (event.x, event.y, event.button, )
+        return False
+
+    def on_image_viewport_button_release_event(self, widget, event):
+        print (event.x, event.y, event.button, )
+        return False
+
+    def _save_comment(self, comment):
+        if type(comment) == str:
+            comment = unicode(comment)
+        print 'Setting comment: '+comment+' '+str(type(comment))
+        self.current.setComment(comment)
+
+    #@debug
+    def on_caption_text_focus_in_event(self, widget, event):
+        """
+        On focus-in update caption
+        @param widget:
+        @param event:
+        @return:
+        """
+        widget.get_buffer().set_text(self.current.comment)
+        return False
+
+    #@debug
+    def on_caption_text_focus_out_event(self, widget, event):
+        """
+        On focus-out save caption as jpeg comment
+        @param widget:
+        @param event:
+        @return:
+        """
+        buffer = widget.get_buffer()
+        caption = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter()).strip()
+        self._save_comment(caption)
+        if caption == '':
+            buffer.set_text('Make a caption!')
+
+        return False
+
+    @debug
+    def on_caption_text_insert_text_event(self, buffer, iter, text, length):
+        """
+        If user pressed enter, leave focus
+        @param buffer:
+        @param iter:
+        @param text:
+        @param length:
+        """
+        if text == '\n':
+            print 'Entered: '+buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter())
+
+            self.caption_text.get_toplevel().child_focus(gtk.DIR_TAB_FORWARD)
+
+
+    #@debug
+    def on_caption_text_changed_event(self, buffer):#, iter, text, length):
+        """
+        Remove new lines "\n" and multiple spaces from caption text
+        @param buffer:
+        @return:
+        """
+        old_text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter()) #get caption text
+
+        if old_text.find('\n') != -1 or old_text.find('  ') != -1: #is something to update?
+            old_text = old_text.replace('\n', '') #replace newline
+
+            import re
+            old_text = re.compile('[ ]{2,}').subn(' ', old_text)[0] #replace multiple spaces
+
+            print old_text
+            buffer.set_text(old_text) #update caption text
+
+        return True
+
+    @debug
+    def on_caption_remove_eventbox_button_press_event(self, widget, event):
+        if event.button == 1: #detect left button press
+            if self.current.comment != "":
+                ans = InputQuestion(self.parent.main_widget,
+                                    "Do you want to remove comment?",
+                                    buttons = (gtk.STOCK_NO, gtk.RESPONSE_CANCEL, gtk.STOCK_YES, gtk.RESPONSE_OK))
+                if ans:
+                    self.current.setComment(u"")
+                    self._update_comment()
+
 
 if __name__ == "__main__":
     x = PhotoView({'config': 123})
