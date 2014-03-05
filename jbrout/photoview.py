@@ -133,6 +133,7 @@ class TagEditorDialog(GladeApp, object):
     def run(self):
         self.main_widget.show_all()
         result =  self.main_widget.run()
+        
         if result == gtk.RESPONSE_OK and self.photo:
             tags = sorted(self.get_tags_from_list())
             if tags != self.start_tags:
@@ -141,10 +142,13 @@ class TagEditorDialog(GladeApp, object):
                 #FIXME: something more atomic
                 self.photo.clearTags()
                 self.photo.addTags(tags)
+                self.main_widget.destroy()
+                return True
             else:
                 print 'Tags don\'t changed'
+
         self.main_widget.destroy()
-        return result
+        return False
 
     def get_tags_from_list(self):
         tags = []
@@ -430,13 +434,17 @@ class PhotoView(GladeApp, object):
 
     def _update_status_line(self):
         d = self.current.getInfo()
+
         t = [
-            self.current.file,
+            os.path.split(self.current.file)[1],
             Utils.get_human_readable_date(d['exifdate']),
             str(d['resolution'])+' pixels',
             Utils.get_human_readable_byte_count(d['filesize'], False),
             '('+str(self.index+1)+'/'+str(len(self.images_list))+')'
         ]
+
+        if len(self.current.tags)>0:
+            t.append('tags: '+', '.join(self.current.tags))
 
         self.statusline.set_text('    '.join(t))
 
@@ -729,7 +737,9 @@ class PhotoView(GladeApp, object):
     @debug
     def on_add_tag_button_clicked(self, widget):
         tag_editor = TagEditorDialog(self.current)
-        print tag_editor.run()
+        if tag_editor.run():
+            self._update_status_line()
+
 
 
 if __name__ == "__main__":
