@@ -3,8 +3,11 @@ __author__ = 'solmyr'
 import gtk
 import os
 import time
+import gobject
 from math import log, exp
 from jbrout.commongtk import InputQuestion
+from jbrout.conf import JBrout
+from jbrout.db import PhotoNode
 from __main__ import GladeApp
 
 
@@ -70,26 +73,33 @@ class Utils():
         return vbox
 
     @staticmethod
+    def get_image_from_name(name, size):
+        assert isinstance(name, str), "Image name must be a string"
+
+        icon = None
+        if gtk.stock_lookup(name):
+            icon = gtk.image_new_from_stock(name, size)
+        elif gtk.icon_theme_get_default().has_icon(name):
+            icon = gtk.image_new_from_icon_name(name, size)
+        else:
+            path = os.path.join('..', os.path.dirname(os.path.dirname(__file__)), 'data', 'gfx', name+'.png')
+            if os.path.exists(path):
+                try:
+                    size = gtk.icon_size_lookup(size)
+                    pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(path, size[0], size[1])
+                    icon = gtk.image_new_from_pixbuf(pixbuf)
+                except:
+                    icon = gtk.image_new_from_stock(gtk.STOCK_MISSING_IMAGE)
+            else:
+                icon = gtk.image_new_from_stock(gtk.STOCK_MISSING_IMAGE)
+        return icon
+
+    @staticmethod
     def create_stock_button(image = None, text = None, icon_size = gtk.ICON_SIZE_BUTTON, text_position = "right"):
         assert (image is not None) or (text is not None), "Cannot create empty stock button"
 
         if type(image) == str:
-            if gtk.stock_lookup(image):
-                icon = gtk.image_new_from_stock(image, icon_size)
-            elif gtk.icon_theme_get_default().has_icon(image):
-                icon = gtk.image_new_from_icon_name(image, icon_size)
-            else:
-                path = os.path.join('..', os.path.dirname(os.path.dirname(__file__)), 'data', 'gfx', image+'.png')
-                if os.path.exists(path):
-                    try:
-                        size = gtk.icon_size_lookup(icon_size)
-                        pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(path, size[0], size[1])
-                        icon = gtk.image_new_from_pixbuf(pixbuf)
-                    except:
-                        icon = gtk.image_new_from_stock(gtk.STOCK_MISSING_IMAGE)
-                else:
-                    icon = gtk.image_new_from_stock(gtk.STOCK_MISSING_IMAGE)
-
+            icon = Utils.get_image_from_name(image, icon_size)
         else:
             return gtk.Label(text)
 
@@ -114,6 +124,119 @@ class Utils():
 
         box.show()
         return box
+
+class TagEditorDialog(GladeApp, object):
+    glade = os.path.join('..', os.path.dirname(os.path.dirname(__file__)), 'data', 'tageditor.glade')
+    window = 'dialog1'
+    photo = None
+
+    def run(self):
+        self.main_widget.show_all()
+        result =  self.main_widget.run()
+        if result == gtk.RESPONSE_OK and self.photo:
+            tags = sorted(self.get_tags_from_list())
+            if tags != self.start_tags:
+                print 'Saving Tags', tags
+
+                #FIXME: something more atomic
+                self.photo.clearTags()
+                self.photo.addTags(tags)
+            else:
+                print 'Tags don\'t changed'
+        self.main_widget.destroy()
+        return result
+
+    def get_tags_from_list(self):
+        tags = []
+        for row in self.tags_store:
+            tags.append(unicode(row[0], 'utf-8'))
+
+        return tags
+
+    def get_tag_name(self, column, cell, model, iter):
+        #cell.set_property('markup', model.get_value(iter, 0))
+        cell.set_property('text', model.get_value(iter, 0))
+        return False
+
+    def init(self, photo):
+        assert isinstance(photo, PhotoNode), "TagEditor can be initialized only from jbrout.db.PhotoNode"
+
+        self.photo = photo
+
+        self.main_widget.add_button(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL)
+        self.main_widget.add_button(gtk.STOCK_OK, gtk.RESPONSE_OK)
+
+        self.tags_store = gtk.ListStore(gobject.TYPE_STRING)
+
+        all_tags = JBrout.tags.getAllTags() #all tags for searching purpose
+        print all_tags
+
+        self.start_tags = sorted(photo.tags)
+        for tag in photo.tags:
+            self.tags_store.append([tag])
+
+        self.tags_list.set_model(self.tags_store)
+
+        #column display tag icon and name
+        col1 = gtk.TreeViewColumn('Tag')
+        icon = Utils.get_image_from_name('tag', gtk.ICON_SIZE_SMALL_TOOLBAR)
+        if icon!=None:
+            icon_renderer = gtk.CellRendererPixbuf()
+
+            #FIXME: icon may not be init from pixbuf -> exception
+            icon_renderer.set_property('pixbuf', icon.get_pixbuf())
+            col1.pack_start(icon_renderer, False)
+
+        name_renderer = gtk.CellRendererText()
+        col1.set_expand(True)
+        col1.pack_end(name_renderer, True)
+        col1.set_cell_data_func(name_renderer, self.get_tag_name)
+
+        self.tags_list.append_column(col1)
+
+        #column displaing close button for tag delete
+        col2 = gtk.TreeViewColumn('close')
+        col2.set_sizing(gtk.TREE_VIEW_COLUMN_AUTOSIZE)
+        delete_renderer = gtk.CellRendererPixbuf()
+        delete_renderer.set_property('stock-id', gtk.STOCK_CLOSE)
+        col2.pack_start(delete_renderer, False)
+
+        self.tags_list.append_column(col2)
+
+    def _add_tag(self, tag_name):
+        assert isinstance(tag_name, str), "Tag must be a string"
+        tag_name = tag_name.strip()
+
+        for row in self.tags_store:
+            if row[0] == tag_name:
+                return False
+
+        self.tags_store.append([tag_name])
+        return True
+
+    @debug
+    def on_input_tag_activate(self, widget):
+        """
+        Get tag from input and store them for future save.
+        @param widget:
+        """
+        tag = self.input_tag.get_text().strip()
+        self._add_tag(tag)
+        self.input_tag.set_text("")
+        print tag
+
+    @debug
+    def on_add_tag_clicked(self, widget):
+        self.input_tag.emit('activate')
+
+
+    def on_tags_list_button_press_event(self, widget, event):
+        pos = self.tags_list.get_path_at_pos(int(event.x), int(event.y))
+        if event.type == gtk.gdk.BUTTON_PRESS and pos and pos[1].get_title() == 'close':
+            print pos
+            self.tags_store.remove(self.tags_store.get_iter(pos[0]))
+            return True
+        return False
 
 class PhotoView(GladeApp, object):
     class Size():
@@ -218,7 +341,7 @@ class PhotoView(GladeApp, object):
         self.star_button.add(Utils.create_stock_button("unstarred"))
         self.rotate_left_button.add(Utils.create_stock_button("object-rotate-left"))
         self.rotate_right_button.add(Utils.create_stock_button("object-rotate-right"))
-        self.add_tag_button.add(Utils.create_stock_button("tag3"))
+        self.add_tag_button.add(Utils.create_stock_button("tag"))
 
         self.thumbnails = [self.thumbnail1, self.thumbnail2, self.thumbnail3, self.thumbnail4, self.thumbnail5, self.thumbnail6, self.thumbnail7 ]
         self.image_viewport.modify_bg(gtk.STATE_NORMAL,  gtk.gdk.color_parse('#888A85'))
@@ -602,6 +725,11 @@ class PhotoView(GladeApp, object):
                 if ans:
                     self.current.setComment(u"")
                     self._update_comment()
+
+    @debug
+    def on_add_tag_button_clicked(self, widget):
+        tag_editor = TagEditorDialog(self.current)
+        print tag_editor.run()
 
 
 if __name__ == "__main__":

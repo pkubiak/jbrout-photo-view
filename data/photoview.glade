@@ -612,6 +612,7 @@
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
                         <property name="border_width">4</property>
+                        <signal name="clicked" handler="on_add_tag_button_clicked" swapped="no"/>
                       </widget>
                       <packing>
                         <property name="expand">False</property>
