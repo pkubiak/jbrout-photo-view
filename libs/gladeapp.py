@@ -83,11 +83,19 @@ class GladeApp:
         x=parse(self.glade)
 
         theNode = None
-        for widget in x.getElementsByTagName('widget'):
-            if widget.hasAttribute('id') and widget.getAttribute('id') == self.window:
-                theId,theNode = self.window, widget
-                print widget
-                break
+
+        if not hasattr(self, 'window'):
+            #create object from first GtkWindow
+            for widget in x.getElementsByTagName('widget'):
+                if widget.hasAttribute('class') and widget.getAttribute('class') == 'GtkWindow':
+                    theId,theNode = widget.getAttribute('id'), widget
+                    break
+        else:
+            #create object from named widget
+            for widget in x.getElementsByTagName('widget'):
+                if widget.hasAttribute('id') and widget.getAttribute('id') == self.window:
+                    theId,theNode = self.window, widget
+                    break
 
         assert theNode!=None, "*ERROR* l'attribut 'window' dans '%s' ne correspond a aucune widget dans le .glade"%n
 
