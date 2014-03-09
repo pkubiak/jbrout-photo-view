@@ -133,7 +133,7 @@ class TagEditorDialog(GladeApp, object):
     def run(self):
         self.main_widget.show_all()
         result =  self.main_widget.run()
-        
+
         if result == gtk.RESPONSE_OK and self.photo:
             tags = sorted(self.get_tags_from_list())
             if tags != self.start_tags:
@@ -142,6 +142,9 @@ class TagEditorDialog(GladeApp, object):
                 #FIXME: something more atomic
                 self.photo.clearTags()
                 self.photo.addTags(tags)
+
+                JBrout.tags.updateImportedTags(tags)
+
                 self.main_widget.destroy()
                 return True
             else:
@@ -170,10 +173,25 @@ class TagEditorDialog(GladeApp, object):
         self.main_widget.add_button(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL)
         self.main_widget.add_button(gtk.STOCK_OK, gtk.RESPONSE_OK)
 
-        self.tags_store = gtk.ListStore(gobject.TYPE_STRING)
 
-        all_tags = JBrout.tags.getAllTags() #all tags for searching purpose
+        #all tags for autocompletion purpose
+        all_tags = sorted([x[0] for x in JBrout.tags.getAllTags()])
+        all_tags = reduce(lambda x,y: x if y in x else x+[y], all_tags, []) #remove duplicates
         print all_tags
+
+        #store for all tags in database
+        all_tags_store = gtk.ListStore(gobject.TYPE_STRING)
+        for tag in all_tags:
+            all_tags_store.append([tag])
+
+        completion = gtk.EntryCompletion()
+        self.input_tag.set_completion(completion)
+        completion.set_model(all_tags_store)
+        completion.set_text_column(0)
+
+
+        #list of tags for current photo
+        self.tags_store = gtk.ListStore(gobject.TYPE_STRING)
 
         self.start_tags = sorted(photo.tags)
         for tag in photo.tags:
@@ -440,11 +458,14 @@ class PhotoView(GladeApp, object):
             Utils.get_human_readable_date(d['exifdate']),
             str(d['resolution'])+' pixels',
             Utils.get_human_readable_byte_count(d['filesize'], False),
-            '('+str(self.index+1)+'/'+str(len(self.images_list))+')'
         ]
 
+        #if photo has tags display it
         if len(self.current.tags)>0:
             t.append('tags: '+', '.join(self.current.tags))
+
+        #add position of current photo (e.g 5/12)
+        t.append('('+str(self.index+1)+'/'+str(len(self.images_list))+')')
 
         self.statusline.set_text('    '.join(t))
 
@@ -661,7 +682,6 @@ class PhotoView(GladeApp, object):
         print 'Setting comment: '+comment+' '+str(type(comment))
         self.current.setComment(comment)
 
-    #@debug
     def on_caption_text_focus_in_event(self, widget, event):
         """
         On focus-in update caption
@@ -672,7 +692,6 @@ class PhotoView(GladeApp, object):
         widget.get_buffer().set_text(self.current.comment)
         return False
 
-    #@debug
     def on_caption_text_focus_out_event(self, widget, event):
         """
         On focus-out save caption as jpeg comment
@@ -743,8 +762,9 @@ class PhotoView(GladeApp, object):
 
 
 if __name__ == "__main__":
-    x = PhotoView({'config': 123})
-    x.loop()
+    pass
+    #x = PhotoView({'config': 123})
+    #x.loop()
     #gtk.main()
 
 
