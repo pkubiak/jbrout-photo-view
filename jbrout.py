@@ -711,7 +711,6 @@ class TreeTags(gtk.TreeStore):
         self.clear()
         self.fill( JBrout.tags.getRootTag(), None)
 
-
     def fill(self, node, attach):
         """ rebuild treestore from the catgnode 'node' to the iter 'attach' """
         catgs = node.getCatgs()

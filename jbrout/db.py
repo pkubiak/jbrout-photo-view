@@ -28,6 +28,7 @@ import os
 import shutil
 import stat
 import os.path
+import json
 
 from commongtk import Buffer, rgb, Img, MessageBoxScrolled
 
@@ -1038,189 +1039,217 @@ class PhotoNode(object):
 
 
 # =============================================================================
-class DBTags:
-    """ Class to manage tags tree """
+
+
+class DBTags(object):
     def __init__(self, file):
-        if os.path.isfile(file):
-            self.root = ElementTree(file=file).getroot()
-        else:
-            self.root = Element("tags")
         self.file = file
+        if os.path.isfile(file):
+            with open(file, 'r') as f:
+                try:
+                    struct = json.load(f)
+                except:
+                    struct = {}
+            self._root = CatgNode(struct)
+        else:
+            self._root = CatgNode({})
 
     def getAllTags(self):
-        """ return list of tuples (tag, parent catg)"""
-        l = [(n.text, n.getparent().get("name")) for n in
-             self.root.xpath("//tag")]
-        l.sort(cmp=lambda x, y: cmp(x[0].lower(), y[0].lower()))
-        return l
-
+        return reduce(lambda x,y: x if y in x else x+[y],
+            sorted([(tag.name, tag.parent.name) for tag in self._root.getAllTags()]), [])
     def save(self):
-        fid = open(self.file, "w")
-        fid.write("""<?xml version="1.0" encoding="UTF-8"?>""")
-        ElementTree(self.root).write(fid, encoding="utf-8")
-        fid.close()
+        struct = self._root._dump()
+        with open(self.file, 'w') as f:
+            json.dump(struct, f)
 
-    #def getTagForKey(self, key):
-    #    """ return the tag as utf_8 for the key 'key' """
-    #    ln=self.root.xpath("//tag[@key='%s']"%key)
-    #    if ln:
-    #        assert len(ln) == 1
-    #        return dec(ln[0].text)
-
-    #~ def update(self, tg):
-       #~ nc = self.dom.selectSingleNode("//catg[@name='IMPORTEDTAGS']")
-       #~ if not nc:
-          #~ nc=self.dom.createElement("catg")
-          #~ nc.setAttribute( "name", "IMPORTEDTAGS")
-
-       #~ newtags=False
-       #~ st = self.getTags()
-       #~ for i in tg:
-          #~ if i in st:
-             #~ pass
-          #~ else:
-             #~ n=self.dom.createElement("tag")
-             #~ n.setAttribute( "name", i)
-             #~ nc.appendChild(n)
-             #~ newtags = True
-
-       #~ if newtags:
-          #~ self.dom.documentElement.appendChild(nc)
-          #~ self.win.treeTags.init()
-          #~ msgBox(_("There are New Imported Tags"))
     def getRootTag(self):
-        return CatgNode(self.root)
+        return self._root
 
-    def updateImportedTags(self, importedTags):
-        assert type(importedTags) == list
+    def updateImportedTags(self, imported):
+        res = None
 
-        r = self.getRootTag()
-        existingTags = [i.name for i in r.getAllTags()]
+        for catg in self._root.getCatgs():
+            if catg.name == u'Imported Tags':
+                res = catg
 
-        # compare existing and imported tags -> newTags
-        newTags = []
-        for tag in importedTags:
-            if tag not in existingTags:
-                newTags.append(tag)
+        if res is None:
+            res = self._root.addCatg(u'Imported Tags')
 
-        if newTags:
-            # create a category imported
-            nom = u"Imported Tags"
-            while 1:
-                nc = r.addCatg(nom)
-                if nc is not None:
-                    break
-                else:
-                    nom += u"!"
+        inserted = 0
+        for tag in imported:
+            if res.isUnique('tag', tag):
+                res.addTag(tag)
+                inserted += 1
 
-            for tag in newTags:
-                ret = nc.addTag(tag)
-                assert ret is not None, "tag '%s' couldn't be added" % tag
-
-        return len(newTags)
+        return inserted
 
 
 class TagNode(object):
-    """ """
-    def __init__(self, n):
-        assert n.tag == "tag"
-        self.__node = n
+    def __init__(self, name, parent = None):
+        self._name = name.decode('utf-8')
+        self._parent = parent
 
-    def __getName(self):
-        return dec(self.__node.text)
-    name = property(__getName)
+    def _get_name(self):
+        return self._name
+    name = property(_get_name)
 
-    def __getKey(self):
-        return dec(self.__node.get("key"))
+    def _get_parent(self):
+        return self._parent
+    def _set_parent(self, v):
+        self._parent = v
+    parent = property(_get_parent, _set_parent)
 
-    def __setKey(self, v):
-        self.__node.set("key", v)
-    key = property(__getKey, __setKey)
-
+    key = "123456"
     def remove(self):
-        self.__node.getparent().remove(self.__node)
+        if self._parent is not None:
+            self._parent._remove(self)
+            self._parent = None
 
-    def moveToCatg(self, c):
-        assert type(c) == CatgNode
-        self.remove()
-        c._appendToCatg(self.__node)
+    def moveToCatg(self, catg):
+        if self._parent is not None:
+            self._parent._remove(self)
+        catg._tags.append(self)
+        self._parent = catg
+
+
 
 
 class CatgNode(object):
-    """ """
-    def __init__(self, n):
-        assert n.tag == "tags"
-        self.__node = n
 
-    def __getName(self):
-        if "name" in self.__node.attrib:
-            return dec(self.__node.attrib["name"])
-        else:
-            return u"Tags"
-    name = property(__getName)
+    def __init__(self, structure):
+        self._parent = None
+        self._name = structure['name'] if (structure.has_key('name') and isinstance(structure['name'], unicode)) else None
+        self._expanded = structure['expanded'] if (structure.has_key('expanded') and isinstance(structure['expanded'], bool)) else True
 
-    def __getExpand(self):
-        if "expand" in self.__node.attrib:
-            return (self.__node.attrib["expand"] != "0")
-        else:
-            return True
-    expand = property(__getExpand)
+        self._tags = []
+        if structure.has_key('tags') and isinstance(structure['tags'], list):
+            self._tags = []
+            for tag in structure['tags']:
+                if isinstance(tag, unicode):
+                    self._tags.append(TagNode(tag, self))
 
-    def getTags(self):
-        l = [TagNode(i) for i in self.__node.xpath("tag")]
-        l.sort(cmp=lambda x, y: cmp(x.name, y.name))
-        return l
+        self._catgs = []
+        if structure.has_key('categories') and isinstance(structure['categories'], list):
+            for catg in structure['categories']:
+                if isinstance(catg, dict):
+                    try:
+                        x = CatgNode(catg)
+                        x.parent = self
+                        self._catgs.append(x)
+                    except:
+                        pass
 
-    def getCatgs(self):
-        return [CatgNode(i) for i in self.__node.xpath("tags")]
+    def _set_parent(self, parent):
+        self._parent = parent
+    def _get_parent(self):
+        return self._parent
 
-    def getAllTags(self):
-        l = self.getTags()
-        for i in self.getCatgs():
-            l.extend(i.getAllTags())
-        l.sort(cmp=lambda x, y: cmp(x.name, y.name))
-        return l
+    parent = property(_get_parent, _set_parent)
 
-    def addTag(self, t):
-        assert type(t) == unicode
-        if self.isUnique("tag", t):
-            n = Element("tag")
-            n.text = t
-            self.__node.append(n)
-            return TagNode(n)
+    def _get_name(self):
+        return self._name
 
-    def rename(self, newName):
-        self.__node.attrib["name"] = newName
+    name = property(_get_name)
 
-    def remove(self):
-        self.__node.getparent().remove(self.__node)
-
-    def moveToCatg(self, c):
-        self.remove()
-        c._appendToCatg(self.__node)
-
-    def _appendToCatg(self, element):
-        self.__node.append(element)
-
-    def addCatg(self, t):
-        assert type(t) == unicode
-        if self.isUnique("tags", t):
-            n = Element("tags", name=t)
-            self.__node.append(n)
-            return CatgNode(n)
+    def _get_expand(self):
+        return self._expanded
 
     def setExpand(self, bool):
-        if bool:
-            self.__node.attrib["expand"] = "1"
+        self.expanded = bool
+
+    expand = property(_get_expand, setExpand)
+
+    def _dump(self):
+        """
+        @return: Reccurence representation of this node in form suitable for json
+        """
+        return {
+            'name': self._name,
+            'expanded': self.expand,
+            'tags': [tag.name for tag in self._tags],
+            'categories': [catg._dump() for catg in self._catgs]
+        }
+
+
+
+    def _remove(self, item):
+        if isinstance(item, TagNode):
+            for i in xrange(len(self._tags)):
+                if self._tags[i] is item:
+                    del self._tags[i]
+                    break
+
+        if isinstance(item, CatgNode):
+            for i in xrange(len(self._catgs)):
+                if self._catgs[i] is item:
+                    del self._catgs[i]
+                    break
+
+
+    def moveToCatg(self, c):
+        if c.parent is not None:
+            c.parent._remove(c)
+
+        if isinstance(c, TagNode):
+            self._tags.append(c)
         else:
-            self.__node.attrib["expand"] = "0"
+            self._catgs.append(c)
+
+        c._set_parent(self)
+
+    def addTag(self, t):
+        node = TagNode(t.decode('utf-8'), self)
+        self._tags.append(node)
+        return node
+
+    def addCatg(self, t):
+        node = CatgNode({'name': t.decode('utf-8')})
+        node._set_parent(self)
+        self._catgs.append(node)
+        return node
+
 
     def isUnique(self, type, name):
-        if type == "tag":
-            ln = [dec(i.text) for i in self.__node.xpath("//tag")]
+        if type == 'tag':
+            for tag in self._tags:
+                if tag.name == name:
+                    return False
         else:
-            ln = [CatgNode(i).name for i in self.__node.xpath("//tags")]
-        return name not in ln
+            for catg in self._catgs:
+                if catg.name == name:
+                    return False
+
+        return True
+
+    def getCatgs(self):
+        return reduce(lambda x,y: x if y in x else x+[y], sorted(self._catgs, cmp = lambda x, y: cmp(x.name, y.name)), [])
+
+    def getTags(self):
+        return reduce(lambda x,y: x if y in x else x+[y], sorted(self._tags, cmp = lambda x, y: cmp(x.name, y.name)), [])
+
+    def getAllTags(self):
+        tags = self.getTags()
+
+        for catg in self._catgs:
+            res = catg.getAllTags()
+            tags.extend(res)
+
+        #sort and remove duplicates
+        return reduce(lambda x,y: x if y in x else x+[y], sorted(tags, cmp = lambda x, y: cmp(x.name, y.name)), [])
+
+    def rename(self, newName):
+        self._name = newName
+
+    def remove(self):
+        if self.parent is not None:
+            for tag in self._tags:
+                tag.parent = None
+            for catg in self._catgs:
+                catg.parent = None
+            self.parent._remove(self)
+            self.parent = None
+
+
 
 
 if __name__ == "__main__":
