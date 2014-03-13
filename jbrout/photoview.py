@@ -392,6 +392,7 @@ class PhotoView(GladeApp, object):
         self.caption_text.get_buffer().connect_after('changed', self.on_caption_text_changed_event)
         self.caption_text.get_buffer().connect('insert-text', self.on_caption_text_insert_text_event)
 
+
     def move_to_thumbnail(self, widget, event, number):
         self.index += number
 
@@ -470,9 +471,8 @@ class PhotoView(GladeApp, object):
         self.statusline.set_text('    '.join(t))
 
     def _update_main_image(self):
-        pass
-        #if self.image is not None:
-        #    self._apply_zoom_on_image()
+        if self.image is not None:
+            self._apply_zoom_on_image(0.0)
     @debug
     def _update_comment(self):
         print 'Comment: '+str()
