@@ -533,7 +533,7 @@ isreal : %s""" % (self.__file,
 
         if im:
             file1 = StringIO.StringIO()
-            im.save(file1, "JPEG")
+            im.save(file1, format = "JPEG", quality=98, optimize=True)
             buf = file1.getvalue()
             file1.close()
             self.__info.setThumbnailData(buf)
