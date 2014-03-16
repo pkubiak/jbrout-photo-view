@@ -226,8 +226,11 @@ class TagEditorDialog(GladeApp, object):
         self.tags_list.append_column(col2)
 
     def _add_tag(self, tag_name):
-        assert isinstance(tag_name, str), "Tag must be a string"
+        tag_name = tag_name.decode('utf-8')
+        assert isinstance(tag_name, unicode), "Tag must be a string"
         tag_name = tag_name.strip()
+        if tag_name == u"":
+            return False
 
         for row in self.tags_store:
             if row[0] == tag_name:
