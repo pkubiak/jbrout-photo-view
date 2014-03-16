@@ -568,11 +568,17 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <child>
-                      <widget class="GtkButton" id="star_button">
+                      <widget class="GtkScaleButton" id="star_button">
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
                         <property name="border_width">4</property>
+                        <property name="relief">half</property>
+                        <property name="use_stock">True</property>
+                        <property name="orientation">vertical</property>
+                        <property name="value">1</property>
+                        <property name="size">menu</property>
+                        <property name="adjustment">1 0 5 1 1 1</property>
                       </widget>
                       <packing>
                         <property name="expand">False</property>
@@ -586,6 +592,7 @@
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
                         <property name="border_width">4</property>
+                        <signal name="clicked" handler="on_rotate_left_button_clicked" swapped="no"/>
                       </widget>
                       <packing>
                         <property name="expand">False</property>
@@ -599,6 +606,7 @@
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
                         <property name="border_width">4</property>
+                        <signal name="clicked" handler="on_rotate_right_button_clicked" swapped="no"/>
                       </widget>
                       <packing>
                         <property name="expand">False</property>

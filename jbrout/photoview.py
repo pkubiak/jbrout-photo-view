@@ -334,7 +334,7 @@ class PhotoView(GladeApp, object):
 
     def _set_index(self, value):
         if type(value) == int:
-            if 0 <= value < len(self.images_list) and self._index != value:
+            if 0 <= value < len(self.images_list):# and self._index != value:
                 self._index = value
                 self.image = self.current.getOriginalThumbnail()
                 self._update_view()
@@ -360,7 +360,9 @@ class PhotoView(GladeApp, object):
         self.selection_remove_button.add(Utils.create_stock_button(gtk.STOCK_REMOVE, icon_size=gtk.ICON_SIZE_MENU))
         self.selection_clear_button.add(Utils.create_stock_button(gtk.STOCK_CLEAR, icon_size=gtk.ICON_SIZE_MENU))
 
+        self.star_button.remove(self.star_button.get_child())
         self.star_button.add(Utils.create_stock_button("unstarred"))
+        self.star_button.set_property('orientation', gtk.ORIENTATION_HORIZONTAL)
         self.rotate_left_button.add(Utils.create_stock_button("object-rotate-left"))
         self.rotate_right_button.add(Utils.create_stock_button("object-rotate-right"))
         self.add_tag_button.add(Utils.create_stock_button("tag"))
@@ -397,26 +399,18 @@ class PhotoView(GladeApp, object):
         self.index += number
 
 
-    def _get_thumbnail_from_node(self, node):
+    def _get_thumbnail_from_node(self, node, refresh = False):
         """
         Return square miniature of image (e.g. for thumbnail bar or for
         @param node:
         @return:
         """
 
-        if not node.file in self._thumbnails_cache:
+        if not node.file in self._thumbnails_cache or refresh == True:
             size = 32
             pb = node.getOriginalThumbnail()
             w,h = (pb.get_width(), pb.get_height())
 
-            #if w < h:
-            #    pb = pb.subpixbuf((h - w)/2, 0, w, h)
-            #else:
-            #    pb = pb.subpixbuf(0, (w - h)/2, w, h)
-
-            #print pb.get_width(), pb.get_height()
-            #w = pb.get_width()
-            #h = pb.get_height()
             if w > h:
                 pb = pb.scale_simple(w*size/h, size, gtk.gdk.INTERP_HYPER)
             else:
@@ -471,8 +465,11 @@ class PhotoView(GladeApp, object):
         self.statusline.set_text('    '.join(t))
 
     def _update_main_image(self):
+        self.image = self.current.getOriginalThumbnail()
+
         if self.image is not None:
             self._apply_zoom_on_image(0.0)
+
     @debug
     def _update_comment(self):
         print 'Comment: '+str()
@@ -759,6 +756,15 @@ class PhotoView(GladeApp, object):
         if tag_editor.run():
             self._update_status_line()
 
+    def on_rotate_right_button_clicked(self, widget):
+        self.current.rotate('R')
+        self._get_thumbnail_from_node(self.current, True)
+        self._update_view()
+
+    def on_rotate_left_button_clicked(self, widget):
+        self.current.rotate('L')
+        self._get_thumbnail_from_node(self.current, True)
+        self._update_view()
 
 
 if __name__ == "__main__":
