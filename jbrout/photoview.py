@@ -73,7 +73,7 @@ class Utils():
         return vbox
 
     @staticmethod
-    def get_image_from_name(name, size):
+    def get_image_from_name(name, size, fit_size = "both"):
         assert isinstance(name, str), "Image name must be a string"
 
         icon = None
@@ -85,21 +85,35 @@ class Utils():
             path = os.path.join('..', os.path.dirname(os.path.dirname(__file__)), 'data', 'gfx', name+'.png')
             if os.path.exists(path):
                 try:
-                    size = gtk.icon_size_lookup(size)
-                    pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(path, size[0], size[1])
+                    _size = gtk.icon_size_lookup(size)
+                    pixbuf = gtk.gdk.pixbuf_new_from_file(path)
+                    heightS = max(float(_size[1])/float(pixbuf.get_height()), 1.0)
+                    widthS = max(float(_size[0])/float(pixbuf.get_width()), 1.0)
+
+                    if fit_size == 'both':
+                        if heightS < widthS:
+                            pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(path, _size[1]*pixbuf.get_width()/pixbuf.get_height(), _size[1])
+                        else:
+                            pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(path, _size[0], _size[0]*pixbuf.get_height()/pixbuf.get_width())
+                    elif fit_size == 'width':
+                        pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(path, _size[0], _size[0]*pixbuf.get_height()/pixbuf.get_widtht())
+                    else:
+                        pixbuf = gtk.gdk.pixbuf_new_from_file_at_size(path, _size[1]*pixbuf.get_width()/pixbuf.get_height(), _size[1])
+
                     icon = gtk.image_new_from_pixbuf(pixbuf)
-                except:
-                    icon = gtk.image_new_from_stock(gtk.STOCK_MISSING_IMAGE)
+                except Exception as e:
+                    print e
+                    icon = gtk.image_new_from_stock(gtk.STOCK_MISSING_IMAGE, size)
             else:
-                icon = gtk.image_new_from_stock(gtk.STOCK_MISSING_IMAGE)
+                icon = gtk.image_new_from_stock(gtk.STOCK_MISSING_IMAGE, size)
         return icon
 
     @staticmethod
-    def create_stock_button(image = None, text = None, icon_size = gtk.ICON_SIZE_BUTTON, text_position = "right"):
+    def create_stock_button(image = None, text = None, icon_size = gtk.ICON_SIZE_BUTTON, text_position = "right", fit_size = "both"):
         assert (image is not None) or (text is not None), "Cannot create empty stock button"
 
         if type(image) == str:
-            icon = Utils.get_image_from_name(image, icon_size)
+            icon = Utils.get_image_from_name(image, icon_size, fit_size)
         else:
             return gtk.Label(text)
 
@@ -124,6 +138,53 @@ class Utils():
 
         box.show()
         return box
+
+class ValueButton(gtk.Button):
+    __gsignals__ = {
+        'value-changed': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, (object, )),
+    }
+
+    def __init__(self, values, initial_value = None, icon_size = gtk.ICON_SIZE_BUTTON, show_values = False):
+        gtk.Button.__init__(self)
+
+        self.content = []
+        self.values = []
+        self.pos = 0
+
+        for i in values:
+            self.content.append(Utils.create_stock_button(i[1], (str(i[2]) if len(i)==3 else str(i[0])) if show_values == True else None, fit_size = 'height'))
+            self.values.append(i[0])
+
+        self.set_value(initial_value)
+        self._update_widget()
+        self.connect('clicked', self._clicked)
+        self.show()
+
+    def _clicked(self, widget):
+        n = (self.pos+1)%len(self.values)
+        if self.pos != n:
+            self.pos = n
+            self._update_widget()
+            self.emit('value-changed', self.values[n])
+
+    def _update_widget(self):
+        if self.get_child() != None:
+            self.remove(self.get_child())
+        self.add(self.content[self.pos])
+
+    def get_value(self):
+        return self.values[self.pos]
+
+    def set_value(self, value, stop_emit = False):
+        for i in xrange(len(self.values)):
+            if self.values[i] == value:
+                if self.pos != i:
+                    self.pos = i
+                    self._update_widget()
+                    if not stop_emit:
+                        self.emit('value-changed', self.values[i])
+                break
+
 
 class TagEditorDialog(GladeApp, object):
     glade = os.path.join('..', os.path.dirname(os.path.dirname(__file__)), 'data', 'tageditor.glade')
@@ -177,7 +238,6 @@ class TagEditorDialog(GladeApp, object):
         #all tags for autocompletion purpose
         all_tags = sorted([x[0] for x in JBrout.tags.getAllTags()])
         all_tags = reduce(lambda x,y: x if y in x else x+[y], all_tags, []) #remove duplicates
-        print all_tags
 
         #store for all tags in database
         all_tags_store = gtk.ListStore(gobject.TYPE_STRING)
@@ -239,7 +299,6 @@ class TagEditorDialog(GladeApp, object):
         self.tags_store.append([tag_name])
         return True
 
-    @debug
     def on_input_tag_activate(self, widget):
         """
         Get tag from input and store them for future save.
@@ -248,9 +307,8 @@ class TagEditorDialog(GladeApp, object):
         tag = self.input_tag.get_text().strip()
         self._add_tag(tag)
         self.input_tag.set_text("")
-        print tag
 
-    @debug
+
     def on_add_tag_clicked(self, widget):
         self.input_tag.emit('activate')
 
@@ -258,7 +316,6 @@ class TagEditorDialog(GladeApp, object):
     def on_tags_list_button_press_event(self, widget, event):
         pos = self.tags_list.get_path_at_pos(int(event.x), int(event.y))
         if event.type == gtk.gdk.BUTTON_PRESS and pos and pos[1].get_title() == 'close':
-            print pos
             self.tags_store.remove(self.tags_store.get_iter(pos[0]))
             return True
         return False
@@ -363,9 +420,10 @@ class PhotoView(GladeApp, object):
         self.selection_remove_button.add(Utils.create_stock_button(gtk.STOCK_REMOVE, icon_size=gtk.ICON_SIZE_MENU))
         self.selection_clear_button.add(Utils.create_stock_button(gtk.STOCK_CLEAR, icon_size=gtk.ICON_SIZE_MENU))
 
-        self.star_button.remove(self.star_button.get_child())
-        self.star_button.add(Utils.create_stock_button("unstarred"))
-        self.star_button.set_property('orientation', gtk.ORIENTATION_HORIZONTAL)
+        #self.star_button.remove(self.star_button.get_child())
+        #self.star_button.add(Utils.create_stock_button("unstarred"))
+
+        #self.star_button.set_property('orientation', gtk.ORIENTATION_HORIZONTAL)
         self.rotate_left_button.add(Utils.create_stock_button("object-rotate-left"))
         self.rotate_right_button.add(Utils.create_stock_button("object-rotate-right"))
         self.add_tag_button.add(Utils.create_stock_button("tag"))
@@ -397,9 +455,27 @@ class PhotoView(GladeApp, object):
         self.caption_text.get_buffer().connect_after('changed', self.on_caption_text_changed_event)
         self.caption_text.get_buffer().connect('insert-text', self.on_caption_text_insert_text_event)
 
+        #ValueButton for rating
+        self.star_value_button = ValueButton([
+            (0, 'star-0of5', '0/5'), (1, 'star-1of5', '1/5'), (2, 'star-2of5', '2/5'),
+            (3, 'star-3of5', '3/5'), (4, 'star-4of5', '4/5'), (5, 'star-5of5', '5/5')],
+        initial_value = 0, icon_size = gtk.ICON_SIZE_MENU, show_values = True)
+
+        self.star_value_button.show()
+        self.star_value_button.connect('value-changed', self._set_image_rating)
+        self.hbox8.pack_start(self.star_value_button, False, False)
+        self.hbox8.reorder_child(self.star_value_button, 0)
+
+        self.star_value_button.set_border_width(4)
+
+
+    def _set_image_rating(self, widget, value):
+        if self.current != None:
+            self.current.setRating(value)
 
     def move_to_thumbnail(self, widget, event, number):
         self.index += number
+
 
 
     def _get_thumbnail_from_node(self, node, refresh = False):
@@ -473,13 +549,16 @@ class PhotoView(GladeApp, object):
         if self.image is not None:
             self._apply_zoom_on_image(0.0)
 
-    @debug
     def _update_comment(self):
-        print 'Comment: '+str()
-        x = self.current.comment
-        if x == '':
-            x = 'Make a Caption!'
-        self.caption_text.get_buffer().set_text(x)
+        if self.current != None:
+            x = self.current.comment
+            if x == '':
+                x = 'Make a Caption!'
+            self.caption_text.get_buffer().set_text(x)
+
+    def _update_rating(self):
+        if self.current != None:
+            self.star_value_button.set_value(self.current.rating, True)
 
     def _update_view(self):
         self._update_thumbnails_bar()
@@ -487,22 +566,20 @@ class PhotoView(GladeApp, object):
         self._update_status_line()
         self._update_zoom_scale()
         self._update_comment()
+        self._update_rating()
 
-    @debug
     def _update_zoom_scale(self):
         """
         Refresh zoom_scale (HScale) widget according to zoom properties
         """
         if self.image is not None:
             self.zoom_scale.clear_marks()
-            print (self._zoom_min, self._zoom_max)
             self.zoom_scale.set_range(self._zoom_min, self._zoom_max)
 
             self.zoom_scale.add_mark(self._zoom_fit, gtk.POS_BOTTOM, "fit")
             self.zoom_scale.add_mark(0.0, gtk.POS_BOTTOM, "100%")
             self.zoom_scale.set_value(self.zoom)
 
-    @debug
     def _compute_fit_zoom(self):
         """
         Set _zoom_fit according to viewport size
@@ -547,7 +624,6 @@ class PhotoView(GladeApp, object):
         bounds = self._allocation#self.image_viewport.get_allocation()
         return PhotoView.Size(bounds.width, bounds.height)
 
-    @debug
     def _update_adjustments(self):
         zoomed = self._get_zoomed_size()
         alloc = self._get_allocation_size()
@@ -642,7 +718,7 @@ class PhotoView(GladeApp, object):
         alloc = self._get_allocation_size()
         #zoomed = self._get_zoomed_size()
 
-        print (event.x, event.y)
+
 
         orig_x = float(event.x)/float(alloc.width)
         orig_y = float(event.y)/float(alloc.height)
@@ -669,17 +745,17 @@ class PhotoView(GladeApp, object):
 
 
     def on_image_viewport_button_press_event(self, widget, event):
-        print (event.x, event.y, event.button, )
+        #print (event.x, event.y, event.button, )
         return False
 
     def on_image_viewport_button_release_event(self, widget, event):
-        print (event.x, event.y, event.button, )
+        #print (event.x, event.y, event.button, )
         return False
 
     def _save_comment(self, comment):
         if type(comment) == str:
             comment = unicode(comment)
-        print 'Setting comment: '+comment+' '+str(type(comment))
+        #print 'Setting comment: '+comment+' '+str(type(comment))
         self.current.setComment(comment)
 
     def on_caption_text_focus_in_event(self, widget, event):
@@ -707,7 +783,6 @@ class PhotoView(GladeApp, object):
 
         return False
 
-    @debug
     def on_caption_text_insert_text_event(self, buffer, iter, text, length):
         """
         If user pressed enter, leave focus
@@ -717,12 +792,11 @@ class PhotoView(GladeApp, object):
         @param length:
         """
         if text == '\n':
-            print 'Entered: '+buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter())
+            #print 'Entered: '+buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter())
 
             self.caption_text.get_toplevel().child_focus(gtk.DIR_TAB_FORWARD)
 
 
-    #@debug
     def on_caption_text_changed_event(self, buffer):#, iter, text, length):
         """
         Remove new lines "\n" and multiple spaces from caption text
@@ -737,12 +811,11 @@ class PhotoView(GladeApp, object):
             import re
             old_text = re.compile('[ ]{2,}').subn(' ', old_text)[0] #replace multiple spaces
 
-            print old_text
+            #print old_text
             buffer.set_text(old_text) #update caption text
 
         return True
 
-    @debug
     def on_caption_remove_eventbox_button_press_event(self, widget, event):
         if event.button == 1: #detect left button press
             if self.current.comment != "":
@@ -753,7 +826,6 @@ class PhotoView(GladeApp, object):
                     self.current.setComment(u"")
                     self._update_comment()
 
-    @debug
     def on_add_tag_button_clicked(self, widget):
         tag_editor = TagEditorDialog(self.current)
         if tag_editor.run():
