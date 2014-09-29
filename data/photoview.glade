@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <glade-interface>
   <!-- interface-requires gtk+ 2.16 -->
-  <!-- interface-requires canvas 0.0 -->
-  <!-- interface-requires canvas 0.0 -->
   <!-- interface-naming-policy toplevel-contextual -->
   <widget class="GtkWindow" id="window1">
     <property name="width_request">640</property>
@@ -322,33 +320,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <child>
-                  <widget class="GtkScrolledWindow" id="scrolled_viewport">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <child>
-                      <widget class="GtkViewport" id="image_viewport">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="events">GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK | GDK_STRUCTURE_MASK</property>
-                        <signal name="button_press_event" handler="on_image_viewport_button_press_event" swapped="no"/>
-                        <signal name="button_release_event" handler="on_image_viewport_button_release_event" swapped="no"/>
-                        <signal name="size_allocate" handler="on_image_viewport_size_allocate" swapped="no"/>
-                        <child>
-                          <widget class="GtkImage" id="display_image">
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="stock">gtk-missing-image</property>
-                            <property name="icon-size">6</property>
-                          </widget>
-                        </child>
-                      </widget>
-                    </child>
-                  </widget>
-                  <packing>
-                    <property name="expand">True</property>
-                    <property name="fill">True</property>
-                    <property name="position">0</property>
-                  </packing>
+                  <placeholder/>
                 </child>
                 <child>
                   <widget class="GtkHBox" id="hbox6">
@@ -472,20 +444,10 @@
                     <property name="label_xalign">0</property>
                     <property name="shadow_type">in</property>
                     <child>
-                      <widget class="GtkAlignment" id="alignment1">
+                      <widget class="GtkIconView" id="selection_icons">
                         <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="left_padding">12</property>
-                        <child>
-                          <widget class="GnomeIconList" id="iconlist1">
-                            <property name="visible">True</property>
-                            <property name="can_focus">True</property>
-                            <property name="double_buffered">False</property>
-                            <property name="hadjustment">2 0 1000000 1 7 14</property>
-                            <property name="width">1000000</property>
-                            <property name="height">1000000</property>
-                          </widget>
-                        </child>
+                        <property name="can_focus">True</property>
+                        <property name="margin">0</property>
                       </widget>
                     </child>
                     <child>

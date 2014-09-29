@@ -9,6 +9,7 @@ from jbrout.commongtk import InputQuestion
 from jbrout.conf import JBrout
 from jbrout.db import PhotoNode
 from __main__ import GladeApp
+from __main__ import GtkImageView
 
 
 def debug(f):
@@ -383,6 +384,8 @@ class PhotoView(GladeApp, object):
         self._image = value
         self._compute_fit_zoom()
         self.zoom = 'fit'
+        self.image_viewport.set_image(value)
+        self.image_viewport.set_property('zoom', self.image_viewport.get_property('fit-zoom'))
         #self._apply_zoom_on_image() #show new image in widget
 
     image = property(_get_image, _set_image)
@@ -396,7 +399,7 @@ class PhotoView(GladeApp, object):
         if type(value) == int:
             if 0 <= value < len(self.images_list):# and self._index != value:
                 self._index = value
-                self.image = self.current.getOriginalThumbnail()
+                self.image = self.current.getImage()
                 self._update_view()
 
     index = property(_get_index, _set_index)
@@ -428,6 +431,11 @@ class PhotoView(GladeApp, object):
         self.rotate_right_button.add(Utils.create_stock_button("object-rotate-right"))
         self.add_tag_button.add(Utils.create_stock_button("tag"))
 
+        self.image_viewport = GtkImageView()
+
+        self.vbox2.pack_start(self.image_viewport, True, True, 0)
+        self.vbox2.reorder_child(self.image_viewport, 0)
+        self.image_viewport.show()
         self.thumbnails = [self.thumbnail1, self.thumbnail2, self.thumbnail3, self.thumbnail4, self.thumbnail5, self.thumbnail6, self.thumbnail7 ]
         self.image_viewport.modify_bg(gtk.STATE_NORMAL,  gtk.gdk.color_parse('#888A85'))
 
@@ -451,7 +459,7 @@ class PhotoView(GladeApp, object):
         x = Utils.create_expander("QuickFix", label, False)
         self.plugins_box.pack_start(x, False, False)
 
-        self.image_viewport.connect("button_release_event", self.on_image_viewport_button_release_event)
+        #self.image_viewport.connect("button_release_event", self.on_image_viewport_button_release_event)
         self.caption_text.get_buffer().connect_after('changed', self.on_caption_text_changed_event)
         self.caption_text.get_buffer().connect('insert-text', self.on_caption_text_insert_text_event)
 
@@ -478,7 +486,7 @@ class PhotoView(GladeApp, object):
 
 
 
-    def _get_thumbnail_from_node(self, node, refresh = False):
+    def _get_thumbnail_from_node(self, node, refresh = False, size = 32):
         """
         Return square miniature of image (e.g. for thumbnail bar or for
         @param node:
@@ -486,7 +494,6 @@ class PhotoView(GladeApp, object):
         """
 
         if not node.file in self._thumbnails_cache or refresh == True:
-            size = 32
             pb = node.getOriginalThumbnail()
             w,h = (pb.get_width(), pb.get_height())
 
@@ -509,12 +516,26 @@ class PhotoView(GladeApp, object):
                 else:
                     self.thumbnails[i+3].set_from_stock(gtk.STOCK_NO, gtk.ICON_SIZE_BUTTON)
 
+    def _init_selection_view(self):
+        model = gtk.ListStore(gtk.gdk.Pixbuf)
+        for i in self.images_list:
+            model.append((self._get_thumbnail_from_node(i, True,    size = 16), ))
+        self.selection_icons.set_model(model)
+        self.selection_icons.set_pixbuf_column(0)
+        self.selection_icons.set_item_padding(1)
+        self.selection_icons.set_spacing(0)
+        self.selection_icons.set_row_spacing(0)
+        self.selection_icons.set_column_spacing(0)
+        #self.selection_icons.set_item_width(32)
+
+
     def init_data(self, images_list, index, selected=[]):
         self.images_list = images_list
         self.selected = selected
         self.index = index
 
         self._update_view()
+        self._init_selection_view()
 
 
     def unload(self):
@@ -544,7 +565,7 @@ class PhotoView(GladeApp, object):
         self.statusline.set_text('    '.join(t))
 
     def _update_main_image(self):
-        self.image = self.current.getOriginalThumbnail()
+        self.image = self.current.getImage()
 
         if self.image is not None:
             self._apply_zoom_on_image(0.0)
@@ -584,7 +605,7 @@ class PhotoView(GladeApp, object):
         """
         Set _zoom_fit according to viewport size
         """
-        if self.image is None:
+        """if self.image is None:
             return
 
         #TODO: change to _get_allocation_size()
@@ -611,7 +632,7 @@ class PhotoView(GladeApp, object):
         if set_zoom_fit:
             self.zoom = 'fit'
 
-        self._update_zoom_scale()
+        self._update_zoom_scale()"""
 
     def _get_zoomed_size(self):
         if self.image is not None:
@@ -637,7 +658,7 @@ class PhotoView(GladeApp, object):
         """
         Set display_image with applying current zoom property
         """
-        if self.image is not None and ratio != 1.0:
+        """if self.image is not None and ratio != 1.0:
             zoomed = self._get_zoomed_size()
             alloc = self._get_allocation_size()
 
@@ -667,6 +688,7 @@ class PhotoView(GladeApp, object):
 
 
             self.image_viewport.get_bin_window().thaw_updates()
+        """
 
     def on_prev_button_clicked(self, event):
         self.index -= 1
@@ -681,7 +703,7 @@ class PhotoView(GladeApp, object):
 
 
 
-    def on_image_viewport_size_allocate(self, widget, allocation):
+    """def on_image_viewport_size_allocate(self, widget, allocation):
         alloc = self._get_allocation_size()
 
         if alloc.width != allocation.width or alloc.height != allocation.height:
@@ -690,16 +712,19 @@ class PhotoView(GladeApp, object):
             if self.image is not None:
                 self._compute_fit_zoom()
 
-        return False
+        return False"""
 
 
     def on_zoom_fit_button_clicked(self, event):
-        self._zoom_origin_x = self._zoom_origin_y = 0.5
-        self.zoom = 'fit'
+        self.image_viewport.set_property('horizontal-center', 0.5)
+        self.image_viewport.set_property('vertical-center', 0.5)
+        self.image_viewport.set_property('zoom', self.image_viewport.get_property('fit-zoom'))
+
 
     def on_zoom_100_button_clicked(self, event):
-        self._zoom_origin_x = self._zoom_origin_y = 0.5
-        self.zoom = 0.0
+        self.image_viewport.set_property('horizontal-center', 0.5)
+        self.image_viewport.set_property('vertical-center', 0.5)
+        self.image_viewport.set_property('zoom', 1.0)
 
     def on_zoom_out_eventbox_button_press_event(self, widget, event):
         self._zoom_origin_x = self._zoom_origin_y = 0.5
@@ -714,7 +739,7 @@ class PhotoView(GladeApp, object):
         self._set_zoom_with_callback(value, False)
 
 
-    def on_scrolled_viewport_scroll_event(self, widget, event):
+    """def on_scrolled_viewport_scroll_event(self, widget, event):
         alloc = self._get_allocation_size()
         #zoomed = self._get_zoomed_size()
 
@@ -737,20 +762,20 @@ class PhotoView(GladeApp, object):
             self._zoom_origin_y = orig_y
             self.zoom -= self.zoom_step
 
-        return True
+        return True"""
 
 
-    def on_scrolled_viewport_motion_notify_event(self, widget, event):
-        return False
+    """def on_scrolled_viewport_motion_notify_event(self, widget, event):
+        return False"""
 
 
-    def on_image_viewport_button_press_event(self, widget, event):
+    """def on_image_viewport_button_press_event(self, widget, event):
         #print (event.x, event.y, event.button, )
         return False
 
     def on_image_viewport_button_release_event(self, widget, event):
         #print (event.x, event.y, event.button, )
-        return False
+        return False"""
 
     def _save_comment(self, comment):
         if type(comment) == str:

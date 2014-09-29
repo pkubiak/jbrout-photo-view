@@ -36,6 +36,7 @@ locale.setlocale(locale.LC_ALL)
 
 from libs.gladeapp import GladeApp
 from libs.i18n import createGetText
+from pygtkimageview.pygtkimageview import GtkImageView
 
 # make translation available in the gui/gtk
 GladeApp.bindtextdomain("jbrout",
@@ -79,6 +80,7 @@ import sys
 import traceback
 import optparse
 import filecmp
+import pygtkimageview
 
 
 def myExceptHook(type, value, tb):
