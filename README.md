@@ -7,9 +7,9 @@
 
 ### Current version (16/02/2014)
 
-![Preview](docs/Screenshot - 160214 - 03:16:23.png)
+![Preview](docs/Screenshot%20-%20160214%20-%2003:16:23.png)
 
 ### Current version (30/09/2014)
 
-![Preview](docs/Screenshot - 300914 - 00:50:17.png)
+![Preview](docs/Screenshot%20-%20300914%20-%2000:50:17.png)
 
